@@ -16,10 +16,15 @@ jobs:
           path: nanopb
           fetch-depth: "0"
       
+      - name: Install dependencies
+        run: |
+          pip3 install --user scons protobuf grpcio-tools pyinstaller
+          python3 -c 'import google.protobuf; print(google.protobuf.__file__)'
+      
       - name: Run clang tests
         run: |
           cd nanopb/tests
-          scons CXX=clang++ CC=clang
+          python3 -m SCons CXX=clang++ CC=clang
       
       - name: Build binary package
         run: |
@@ -27,32 +32,18 @@ jobs:
           git clean -dxf
           tools/make_mac_package.sh
       
+      - name: Test binary package
+        run: |
+          tar xzf nanopb/dist/*.tar.gz
+          cd nanopb-*/tests
+          python3 -m SCons
+          cd ../examples/simple
+          make
+          ./simple
+      
       - name: Upload binary
         uses: actions/upload-artifact@v2
         with:
           path: nanopb/dist/*.tar.gz
           name: nanopb-binary-macos
-
-  test_binary_macos:
-    name: Test binary package
-    runs-on: macos-11
-    needs: build_macos
-    
-    steps:
-        - name: Download binary
-          uses: actions/download-artifact@v2
-          with:
-            name: nanopb-binary-macos
-        
-        - name: Run test cases
-          run: |
-            tar xzf nanopb*.tar.gz
-            cd nanopb*/tests
-            scons
-        
-        - name: Build example
-          run: |
-            cd nanopb/examples/simple
-            make
-            ./simple
 
